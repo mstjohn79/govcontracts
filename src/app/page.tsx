@@ -32,31 +32,40 @@ export default function Home() {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('overview');
   const [error, setError] = useState<string | null>(null);
+  const [debugInfo, setDebugInfo] = useState<string>('initializing...');
 
   // Fetch contracts on load
   useEffect(() => {
+    setDebugInfo('useEffect triggered, calling fetchContracts...');
     fetchContracts();
   }, []);
 
   const fetchContracts = async (query?: string) => {
     setIsLoading(true);
     setError(null);
+    setDebugInfo('fetchContracts started...');
     try {
       const params = new URLSearchParams();
       if (query) params.set('search', query);
       params.set('limit', '100');
       
+      setDebugInfo(`Fetching /api/contracts?${params}...`);
       const response = await fetch(`/api/contracts?${params}`);
       const data = await response.json();
       
-      if (data.success) {
+      setDebugInfo(`Response: success=${data.success}, count=${data.contracts?.length || 0}`);
+      
+      if (data.success && data.contracts) {
         setContracts(data.contracts);
+        setDebugInfo(`Loaded ${data.contracts.length} contracts successfully`);
       } else {
         setError('Failed to load contracts');
+        setDebugInfo(`Failed: ${JSON.stringify(data).slice(0, 100)}`);
       }
-    } catch (error) {
-      console.error('Error fetching contracts:', error);
+    } catch (err) {
+      console.error('Error fetching contracts:', err);
       setError('Error fetching contracts. Please try again.');
+      setDebugInfo(`Error: ${err}`);
     } finally {
       setIsLoading(false);
     }
@@ -155,6 +164,11 @@ export default function Home() {
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-6">
+        {/* Debug Info */}
+        <div className="mb-4 p-3 bg-yellow-100 border border-yellow-300 rounded text-sm">
+          <strong>Debug:</strong> {debugInfo} | Contracts loaded: {contracts.length} | Loading: {isLoading ? 'yes' : 'no'}
+        </div>
+        
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList className="grid w-full grid-cols-4 lg:w-[500px]">
             <TabsTrigger value="overview" className="flex items-center gap-2">
