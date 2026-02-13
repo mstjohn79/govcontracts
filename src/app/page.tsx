@@ -31,6 +31,7 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('overview');
+  const [error, setError] = useState<string | null>(null);
 
   // Fetch contracts on load
   useEffect(() => {
@@ -39,19 +40,23 @@ export default function Home() {
 
   const fetchContracts = async (query?: string) => {
     setIsLoading(true);
+    setError(null);
     try {
       const params = new URLSearchParams();
       if (query) params.set('search', query);
-      params.set('limit', '200');
+      params.set('limit', '100');
       
       const response = await fetch(`/api/contracts?${params}`);
       const data = await response.json();
       
       if (data.success) {
         setContracts(data.contracts);
+      } else {
+        setError('Failed to load contracts');
       }
     } catch (error) {
       console.error('Error fetching contracts:', error);
+      setError('Error fetching contracts. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -172,7 +177,31 @@ export default function Home() {
 
           {/* Overview Tab */}
           <TabsContent value="overview" className="space-y-6">
-            <StatsCards contracts={contracts} />
+            {isLoading && (
+              <div className="flex items-center justify-center py-12">
+                <RefreshCw className="h-8 w-8 animate-spin text-blue-600" />
+                <span className="ml-3 text-muted-foreground">Loading contracts from USASpending.gov...</span>
+              </div>
+            )}
+            
+            {error && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
+                {error}
+                <Button variant="outline" size="sm" className="ml-4" onClick={() => fetchContracts()}>
+                  Retry
+                </Button>
+              </div>
+            )}
+            
+            {!isLoading && !error && contracts.length === 0 && (
+              <div className="text-center py-12 text-muted-foreground">
+                No contracts found. Try a different search term.
+              </div>
+            )}
+            
+            {!isLoading && contracts.length > 0 && (
+              <>
+                <StatsCards contracts={contracts} />
             
             <div className="grid gap-6 lg:grid-cols-3">
               <TopContractorsChart contracts={contracts} />
@@ -215,6 +244,8 @@ export default function Home() {
                 </CardContent>
               </Card>
             </div>
+              </>
+            )}
           </TabsContent>
 
           {/* Contracts Tab */}
